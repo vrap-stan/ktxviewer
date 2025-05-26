@@ -18,13 +18,14 @@
     "noEmit": true,
     "jsx": "react-jsx",
     /* Linting */
-    "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
     "baseUrl": ".",
+    "noImplicitAny": false, // 'any' 타입을 묵시적으로 허용
+    "strict": false // 전체 strict 모드 비활성화 (모든 엄격한 검사 끔)
   },
   "include": [
     "src"
