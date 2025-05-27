@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, {useRef, useEffect, useState, useCallback} from 'react';
 import * as THREE from 'three';
 import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js';
 import { read as parseKtxFile, type KTX2Container } from 'ktx-parse';
@@ -79,6 +79,7 @@ const getKtxOriginalFormatString = (ktxInfo: KTXContainer | null): string => {
   return "N/A (Format Undefined in KTX Info)";
 };
 
+
 const TextureViewer: React.FC<TextureViewerProps> = ({ selectedFile, onTextureLoaded, flipY }) => {
   const mountRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -89,7 +90,22 @@ const TextureViewer: React.FC<TextureViewerProps> = ({ selectedFile, onTextureLo
   
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [zoom, setZoom] = useState<ZoomMode>('fit-screen');
+  const [zoom, setZoom] = useState<ZoomMode>(1.0);
+
+  const onMouseScrollEvent = (event: WheelEvent) => {
+    function isNumber(value: any) {
+      return typeof value === 'number' && !isNaN(value);
+    }
+
+    const deltaY = event.deltaY;
+
+    if (isNumber(zoom)) {
+      setZoom(pre => {
+        return pre as number + deltaY * (-0.001);
+      });
+    }
+    return null;
+  }
 
   // Stable render function
   const renderScene = useCallback(() => {
@@ -158,6 +174,8 @@ const TextureViewer: React.FC<TextureViewerProps> = ({ selectedFile, onTextureLo
   useEffect(() => {
     const currentMount = mountRef.current;
     if (!currentMount) return;
+
+    currentMount.addEventListener('wheel', onMouseScrollEvent);
 
     sceneRef.current = new THREE.Scene();
     
