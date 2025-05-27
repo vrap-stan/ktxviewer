@@ -125,7 +125,7 @@ const TextureViewer: React.FC<TextureViewerProps> = ({ selectedFile, onTextureLo
     rendererRef.current = renderer;
 
     const ktx2Loader = new KTX2Loader();
-    ktx2Loader.setTranscoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/basis/');
+    ktx2Loader.setTranscoderPath('https://cdn.jsdelivr.net/npm/three@0.176.0/examples/jsm/libs/basis/');
     ktx2Loader.detectSupport(renderer);
     ktx2LoaderRef.current = ktx2Loader;
 
@@ -217,8 +217,9 @@ const TextureViewer: React.FC<TextureViewerProps> = ({ selectedFile, onTextureLo
             URL.revokeObjectURL(fileUrl);
 
             texture.colorSpace = THREE.SRGBColorSpace;
-            texture.minFilter = THREE.LinearFilter;
+            texture.minFilter = THREE.LinearMipMapLinearFilter;
             texture.magFilter = THREE.LinearFilter;
+            texture.flipY = true;
             texture.needsUpdate = true;
 
             material.map = texture;
