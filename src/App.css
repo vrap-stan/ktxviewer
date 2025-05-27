@@ -19,7 +19,7 @@ body, html, #root {
 .main-content {
   flex-grow: 1;
   height: 100%;
-  position: relative; /* For InfoOverlay positioning */
+  position: relative; /* For InfoOverlay and ZoomControls positioning */
   background-color: #282c34; /* Canvas background color */
 }
 
@@ -37,10 +37,12 @@ body, html, #root {
   transition: width 0.3s ease-in-out, padding 0.3s ease-in-out;
   position: relative; /* For the toggle button */
   color: #f0f0f0;
+  display: flex;
+  flex-direction: column;
 }
 
 .file-sidebar h3 {
-  margin-top: 0;
+  margin-top: 10px;
   border-bottom: 1px solid #555;
   padding-bottom: 10px;
 }
@@ -49,6 +51,8 @@ body, html, #root {
   list-style: none;
   padding: 0;
   margin: 0;
+  flex-grow: 1; /* Allow ul to take remaining space for scrolling */
+  overflow-y: auto;
 }
 
 .file-sidebar li {
@@ -133,4 +137,44 @@ body, html, #root {
   padding: 20px;
   background-color: rgba(0,0,0,0.3);
   border-radius: 8px;
+  z-index: 1;
+}
+
+/* Zoom Controls */
+.zoom-controls {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(50, 50, 50, 0.8);
+  padding: 5px;
+  border-radius: 5px;
+  display: flex;
+  gap: 5px;
+  z-index: 10;
+}
+
+.zoom-controls button {
+  background-color: #555;
+  border: 1px solid #666;
+  color: white;
+  padding: 6px 10px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 12px;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.zoom-controls button:hover {
+  background-color: #666;
+  border-color: #777;
+}
+
+.zoom-controls button.active {
+  background-color: #007bff;
+  border-color: #0056b3;
+  font-weight: bold;
 }

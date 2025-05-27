@@ -13,64 +13,71 @@ interface TextureViewerProps {
   flipY?: boolean;
 }
 
-// Helper to get human-readable format string from Three.js texture object
+type ZoomMode = number | 'fit-screen' | 'fit-width' | 'fit-height';
+
+interface ZoomControlsProps {
+  onZoomChange: (zoom: ZoomMode) => void;
+  currentZoom: ZoomMode;
+}
+
+const ZoomControls: React.FC<ZoomControlsProps> = ({ onZoomChange, currentZoom }) => {
+  const zoomOptions: { label: string; value: ZoomMode }[] = [
+    { label: '25%', value: 0.25 },
+    { label: '50%', value: 0.5 },
+    { label: '100%', value: 1.0 },
+    { label: '150%', value: 1.5 },
+    { label: '200%', value: 2.0 },
+    { label: 'Fit Screen', value: 'fit-screen' },
+    { label: 'Fit Width', value: 'fit-width' },
+    { label: 'Fit Height', value: 'fit-height' },
+  ];
+
+  return (
+    <div className="zoom-controls">
+      {zoomOptions.map(opt => (
+        <button
+          key={String(opt.value)}
+          onClick={() => onZoomChange(opt.value)}
+          className={currentZoom === opt.value ? 'active' : ''}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  );
+};
+
 const getThreeJsFormatString = (texture: THREE.Texture | THREE.CompressedTexture): string => {
   if (!texture) return "Unknown";
-
   const formatMap: { [key: number]: string } = {
-    [THREE.AlphaFormat]: "Alpha",
-    [THREE.RedFormat]: "Red",
-    [THREE.RedIntegerFormat]: "RedInteger",
-    [THREE.RGFormat]: "RG",
-    [THREE.RGIntegerFormat]: "RGInteger",
-    [THREE.RGBFormat]: "RGB",
-    [THREE.RGBIntegerFormat]: "RGBInteger",
-    [THREE.RGBAFormat]: "RGBA",
-    [THREE.RGBAIntegerFormat]: "RGBAInteger",
-    [THREE.RGB_S3TC_DXT1_Format]: "DXT1 RGB",
-    [THREE.RGBA_S3TC_DXT1_Format]: "DXT1 RGBA",
-    [THREE.RGBA_S3TC_DXT3_Format]: "DXT3 RGBA",
-    [THREE.RGBA_S3TC_DXT5_Format]: "DXT5 RGBA",
-    [THREE.RGB_PVRTC_4BPPV1_Format]: "PVRTC1 RGB 4bpp",
-    [THREE.RGB_PVRTC_2BPPV1_Format]: "PVRTC1 RGB 2bpp",
-    [THREE.RGBA_PVRTC_4BPPV1_Format]: "PVRTC1 RGBA 4bpp",
-    [THREE.RGBA_PVRTC_2BPPV1_Format]: "PVRTC1 RGBA 2bpp",
-    [THREE.RGB_ETC1_Format]: "ETC1 RGB",
-    [THREE.RGB_ETC2_Format]: "ETC2 RGB",
-    [THREE.RGBA_ETC2_EAC_Format]: "ETC2 RGBA",
-    [THREE.RGBA_ASTC_4x4_Format]: "ASTC 4x4",
+    [THREE.AlphaFormat]: "Alpha", [THREE.RedFormat]: "Red", [THREE.RedIntegerFormat]: "RedInteger",
+    [THREE.RGFormat]: "RG", [THREE.RGIntegerFormat]: "RGInteger", [THREE.RGBFormat]: "RGB",
+    [THREE.RGBIntegerFormat]: "RGBInteger", [THREE.RGBAFormat]: "RGBA", [THREE.RGBAIntegerFormat]: "RGBAInteger",
+    [THREE.RGB_S3TC_DXT1_Format]: "DXT1 RGB", [THREE.RGBA_S3TC_DXT1_Format]: "DXT1 RGBA",
+    [THREE.RGBA_S3TC_DXT3_Format]: "DXT3 RGBA", [THREE.RGBA_S3TC_DXT5_Format]: "DXT5 RGBA",
+    [THREE.RGB_PVRTC_4BPPV1_Format]: "PVRTC1 RGB 4bpp", [THREE.RGB_PVRTC_2BPPV1_Format]: "PVRTC1 RGB 2bpp",
+    [THREE.RGBA_PVRTC_4BPPV1_Format]: "PVRTC1 RGBA 4bpp", [THREE.RGBA_PVRTC_2BPPV1_Format]: "PVRTC1 RGBA 2bpp",
+    [THREE.RGB_ETC1_Format]: "ETC1 RGB", [THREE.RGB_ETC2_Format]: "ETC2 RGB",
+    [THREE.RGBA_ETC2_EAC_Format]: "ETC2 RGBA", [THREE.RGBA_ASTC_4x4_Format]: "ASTC 4x4",
     [THREE.RGBA_ASTC_5x4_Format]: "ASTC 5x4",
   };
-
-  if (texture.format && formatMap[texture.format]) {
-    let formatStr = formatMap[texture.format];
-    if (texture.colorSpace === THREE.SRGBColorSpace) {
-      formatStr += " (sRGB)";
-    }
-    return formatStr;
+  let formatStr = formatMap[texture.format] || `Unknown GPU Format (format: ${texture.format}, type: ${texture.type}, colorSpace: ${texture.colorSpace})`;
+  if (texture.format && formatMap[texture.format] && texture.colorSpace === THREE.SRGBColorSpace) {
+    formatStr += " (sRGB)";
   }
-  return `Unknown GPU Format (format: ${texture.format}, type: ${texture.type}, colorSpace: ${texture.colorSpace})`;
+  return formatStr;
 };
 
-// Helper to get KTX-specific format info (simplified)
 const getKtxOriginalFormatString = (ktxInfo: KTXContainer | null): string => {
   if (!ktxInfo) return "N/A (No KTX Info)";
-
-  // KTX1 specific format
   if ('glInternalFormat' in ktxInfo && ktxInfo.glInternalFormat !== undefined) {
-    // This check ensures ktxInfo is narrowed to KTX1Container if this block is entered
-    // return `KTX1 Internal: 0x${(ktxInfo as KTX1Container).glInternalFormat.toString(16)}`;
     throw new Error("KTX1 format handling is not implemented in this example.");
   }
-  // KTX2 specific format
   if ('vkFormat' in ktxInfo && ktxInfo.vkFormat !== undefined) {
-    // This check ensures ktxInfo is narrowed to KTX2Container
     return `KTX2 VKFormat: 0x${(ktxInfo as KTX2Container).vkFormat.toString(16)}`;
   }
-
   return "N/A (Format Undefined in KTX Info)";
 };
-
 
 const TextureViewer: React.FC<TextureViewerProps> = ({ selectedFile, onTextureLoaded, flipY }) => {
   const mountRef = useRef<HTMLDivElement>(null);
@@ -79,255 +86,278 @@ const TextureViewer: React.FC<TextureViewerProps> = ({ selectedFile, onTextureLo
   const cameraRef = useRef<THREE.OrthographicCamera | null>(null);
   const meshRef = useRef<THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial> | null>(null);
   const ktx2LoaderRef = useRef<KTX2Loader | null>(null);
+  
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [zoom, setZoom] = useState<ZoomMode>('fit-screen');
 
-
-  const updatePlaneSize = useCallback((texture: THREE.Texture | THREE.CompressedTexture | null) => {
-    if (!meshRef.current || !cameraRef.current || !texture || !mountRef.current || !texture.image) return;
-
-    const plane = meshRef.current;
-    const texWidth = texture.image.width;
-    const texHeight = texture.image.height;
-
-    const canvasWidth = mountRef.current.clientWidth;
-    const canvasHeight = mountRef.current.clientHeight;
-
-    const texAspect = texWidth / texHeight;
-    const canvasAspect = canvasWidth / canvasHeight;
-
-    let planeWidth, planeHeight;
-
-    if (texAspect > canvasAspect) {
-      planeWidth = canvasWidth;
-      planeHeight = canvasWidth / texAspect;
-    } else {
-      planeHeight = canvasHeight;
-      planeWidth = canvasHeight * texAspect;
-    }
-    plane.scale.set(planeWidth, planeHeight, 1);
-
+  // Stable render function
+  const renderScene = useCallback(() => {
     if (rendererRef.current && sceneRef.current && cameraRef.current) {
       rendererRef.current.render(sceneRef.current, cameraRef.current);
     }
   }, []);
 
+  // Stable function to update plane scale based on zoom and texture dimensions
+  const updatePlaneScale = useCallback(() => {
+    if (!meshRef.current || !cameraRef.current || !mountRef.current) return;
+
+    const plane = meshRef.current;
+    const texture = plane.material.map as THREE.Texture | THREE.CompressedTexture | null;
+
+    if (!texture || !texture.image || texture.image.width === 0 || texture.image.height === 0) {
+      plane.scale.set(0, 0, 0);
+      return;
+    }
+
+    const texWidth = texture.image.width;
+    const texHeight = texture.image.height;
+    const canvasEl = mountRef.current;
+    const canvasWidth = canvasEl.clientWidth;
+    const canvasHeight = canvasEl.clientHeight;
+
+    if (canvasWidth === 0 || canvasHeight === 0) {
+        plane.scale.set(0,0,0);
+        return;
+    }
+
+    let newPlaneWidth: number;
+    let newPlaneHeight: number;
+
+    if (typeof zoom === 'number') {
+      newPlaneWidth = texWidth * zoom;
+      newPlaneHeight = texHeight * zoom;
+    } else {
+      const texAspect = texWidth / texHeight;
+      const canvasAspect = canvasWidth / canvasHeight;
+      switch (zoom) {
+        case 'fit-width':
+          newPlaneWidth = canvasWidth;
+          newPlaneHeight = canvasWidth / texAspect;
+          break;
+        case 'fit-height':
+          newPlaneHeight = canvasHeight;
+          newPlaneWidth = canvasHeight * texAspect;
+          break;
+        case 'fit-screen':
+        default:
+          if (texAspect > canvasAspect) {
+            newPlaneWidth = canvasWidth;
+            newPlaneHeight = canvasWidth / texAspect;
+          } else {
+            newPlaneHeight = canvasHeight;
+            newPlaneWidth = canvasHeight * texAspect;
+          }
+          break;
+      }
+    }
+    plane.scale.set(newPlaneWidth, newPlaneHeight, 1);
+  }, [zoom]); // Depends on zoom state
+
+  // Effect for one-time Three.js setup
   useEffect(() => {
     const currentMount = mountRef.current;
     if (!currentMount) return;
 
-    const scene = new THREE.Scene();
-    sceneRef.current = scene;
+    sceneRef.current = new THREE.Scene();
+    
+    rendererRef.current = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    rendererRef.current.setPixelRatio(window.devicePixelRatio);
+    currentMount.appendChild(rendererRef.current.domElement);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.setSize(currentMount.clientWidth, currentMount.clientHeight);
-    currentMount.appendChild(renderer.domElement);
-    rendererRef.current = renderer;
+    ktx2LoaderRef.current = new KTX2Loader()
+      .setTranscoderPath('https://cdn.jsdelivr.net/npm/three@0.176.0/examples/jsm/libs/basis/')
+      .detectSupport(rendererRef.current);
 
-    const ktx2Loader = new KTX2Loader();
-    ktx2Loader.setTranscoderPath('https://cdn.jsdelivr.net/npm/three@0.176.0/examples/jsm/libs/basis/');
-    ktx2Loader.detectSupport(renderer);
-    ktx2LoaderRef.current = ktx2Loader;
-
-    const camera = new THREE.OrthographicCamera(
-      -currentMount.clientWidth / 2, currentMount.clientWidth / 2,
-      currentMount.clientHeight / 2, -currentMount.clientHeight / 2,
-      0.1, 10
-    );
-    camera.position.z = 1;
-
-    // flip y
-    {
-      camera.position.z = -1;
-      camera.rotation.order = 'XZY';
-      camera.rotation.z = Math.PI;
-      camera.rotation.y = Math.PI;
-    }
-
-
-    cameraRef.current = camera;
+    // Initialize camera with default orientation
+    cameraRef.current = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 1000);
+    cameraRef.current.position.z = 1; // Default non-flipped
+    cameraRef.current.rotation.order = 'XYZ'; // Default order
 
     const geometry = new THREE.PlaneGeometry(1, 1);
     const material = new THREE.MeshBasicMaterial({ transparent: true, color: 0xffffff, side: THREE.DoubleSide });
-    const mesh = new THREE.Mesh(geometry, material);
-    meshRef.current = mesh;
-    scene.add(mesh);
+    meshRef.current = new THREE.Mesh(geometry, material);
+    sceneRef.current.add(meshRef.current);
 
-    const handleResize = () => {
-      if (currentMount && rendererRef.current && cameraRef.current && meshRef.current) {
-        const width = currentMount.clientWidth;
-        const height = currentMount.clientHeight;
-        rendererRef.current.setSize(width, height);
-        cameraRef.current.left = -width / 2;
-        cameraRef.current.right = width / 2;
-        cameraRef.current.top = height / 2;
-        cameraRef.current.bottom = -height / 2;
-        cameraRef.current.updateProjectionMatrix();
-        updatePlaneSize(meshRef.current.material.map);
-        if (rendererRef.current && sceneRef.current && cameraRef.current) {
-          rendererRef.current.render(sceneRef.current, cameraRef.current);
-        }
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-    handleResize();
+    // Initial call to render. Other effects (flipY, zoom, resize) will also render.
+    // renderScene(); // Let other effects handle initial render after their setup.
 
     return () => {
-      window.removeEventListener('resize', handleResize);
       ktx2LoaderRef.current?.dispose();
-
       if (meshRef.current) {
         meshRef.current.geometry.dispose();
         if (meshRef.current.material.map) {
-          meshRef.current.material.map.dispose();
+          (meshRef.current.material.map as THREE.Texture).dispose();
         }
         meshRef.current.material.dispose();
       }
       rendererRef.current?.dispose();
-      if (currentMount && rendererRef.current?.domElement) {
-        if (currentMount.contains(rendererRef.current.domElement)) {
-          currentMount.removeChild(rendererRef.current.domElement);
-        }
+      if (currentMount && rendererRef.current?.domElement && currentMount.contains(rendererRef.current.domElement)) {
+        currentMount.removeChild(rendererRef.current.domElement);
       }
+      sceneRef.current = null;
+      rendererRef.current = null;
+      cameraRef.current = null;
+      meshRef.current = null;
+      ktx2LoaderRef.current = null;
     };
-  }, [updatePlaneSize]);
+  }, []); // Empty dependency array: runs only on mount and unmount
+
+  // Effect for handling window resize
+  const handleResize = useCallback(() => {
+    if (mountRef.current && rendererRef.current && cameraRef.current) {
+      const width = mountRef.current.clientWidth;
+      const height = mountRef.current.clientHeight;
+      rendererRef.current.setSize(width, height);
+
+      cameraRef.current.left = -width / 2;
+      cameraRef.current.right = width / 2;
+      cameraRef.current.top = height / 2;
+      cameraRef.current.bottom = -height / 2;
+      cameraRef.current.updateProjectionMatrix();
+      
+      updatePlaneScale();
+      renderScene();
+    }
+  }, [updatePlaneScale, renderScene]);
 
   useEffect(() => {
-    if (selectedFile && ktx2LoaderRef.current && meshRef.current && rendererRef.current && sceneRef.current && cameraRef.current) {
-      setError(null);
-      setIsLoading(true);
-      const mesh = meshRef.current;
-      const material = mesh.material;
+    window.addEventListener('resize', handleResize);
+    handleResize(); // Initial call to set up size and projection
+    return () => window.removeEventListener('resize', handleResize);
+  }, [handleResize]);
 
-      if (material.map) {
-        material.map.dispose();
-        material.map = null;
+  // Effect for flipY changes
+  useEffect(() => {
+    if (cameraRef.current) {
+      const camera = cameraRef.current;
+      if (flipY) {
+        camera.position.z = -1;
+        camera.rotation.order = 'XZY';
+        camera.rotation.x = 0;
+        camera.rotation.y = Math.PI;
+        camera.rotation.z = Math.PI;
+      } else {
+        camera.position.z = 1;
+        camera.rotation.set(0, 0, 0); // Reset rotation
+        camera.rotation.order = 'XYZ'; // Reset order
       }
+      camera.updateMatrixWorld(); // Ensure matrix is updated
+      renderScene();
+    }
+  }, [flipY, renderScene]);
 
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        if (e.target?.result && ktx2LoaderRef.current) {
-          const arrayBuffer = e.target.result as ArrayBuffer;
-          let ktxParsedInfo: KTXContainer | null = null; // Use the union type
-          let ktxOriginalFormat = "N/A";
+  // Effect for zoom changes
+  useEffect(() => {
+    updatePlaneScale();
+    renderScene();
+  }, [zoom, updatePlaneScale, renderScene]);
 
-          try {
-            ktxParsedInfo = parseKtxFile(new Uint8Array(arrayBuffer));
-            ktxOriginalFormat = getKtxOriginalFormatString(ktxParsedInfo);
-          } catch (parseError) {
-            console.warn("ktx-parse error:", parseError);
-            ktxOriginalFormat = "N/A (Parse Error)";
+  // Effect for selected file changes (texture loading)
+  useEffect(() => {
+    if (!selectedFile || !ktx2LoaderRef.current || !meshRef.current) {
+      if (meshRef.current) { // Handle deselection or initial state
+        const material = meshRef.current.material;
+        if (material.map) {
+          (material.map as THREE.Texture).dispose();
+          material.map = null;
+          material.needsUpdate = true;
+        }
+        updatePlaneScale(); // This will set scale to 0 if no texture
+        renderScene();
+      }
+      if (!selectedFile) {
+         onTextureLoaded({ width: 0, height: 0, format: 'No file selected' });
+      }
+      return;
+    }
+
+    setError(null);
+    setIsLoading(true);
+    const mesh = meshRef.current;
+    const material = mesh.material;
+
+    if (material.map) {
+      (material.map as THREE.Texture).dispose();
+      material.map = null;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      if (e.target?.result && ktx2LoaderRef.current) {
+        const arrayBuffer = e.target.result as ArrayBuffer;
+        let ktxParsedInfo: KTXContainer | null = null;
+        let ktxOriginalFormat = "N/A";
+
+        try {
+          ktxParsedInfo = parseKtxFile(new Uint8Array(arrayBuffer));
+          ktxOriginalFormat = getKtxOriginalFormatString(ktxParsedInfo);
+        } catch (parseError) {
+          console.warn("ktx-parse error:", parseError);
+          ktxOriginalFormat = "N/A (Parse Error)";
+        }
+
+        const fileUrl = URL.createObjectURL(selectedFile);
+        try {
+          const texture = await ktx2LoaderRef.current.loadAsync(fileUrl);
+          URL.revokeObjectURL(fileUrl);
+
+          texture.colorSpace = THREE.SRGBColorSpace;
+          texture.minFilter = THREE.LinearFilter; // Simpler filter for less perf overhead if mipmaps not essential
+          texture.magFilter = THREE.LinearFilter;
+          texture.needsUpdate = true;
+
+          material.map = texture;
+          material.needsUpdate = true;
+
+          updatePlaneScale();
+          renderScene();
+
+          const threeJsGpuFormat = getThreeJsFormatString(texture);
+          let finalFormatString = threeJsGpuFormat;
+          const isKtx2 = (ktxParsedInfo && 'vkFormat' in ktxParsedInfo && ktxParsedInfo.vkFormat !== undefined) || selectedFile.name.toLowerCase().endsWith('.ktx2');
+
+          if (isKtx2) {
+            finalFormatString = `Basis/KTX2 (Original: ${ktxOriginalFormat}, Transcoded to: ${threeJsGpuFormat})`;
+          } else {
+            finalFormatString = `KTX1 (Original: ${ktxOriginalFormat}, Rendered as: ${threeJsGpuFormat})`;
           }
 
-          const fileUrl = URL.createObjectURL(selectedFile);
-
-          try {
-            const texture = await ktx2LoaderRef.current.loadAsync(fileUrl);
-            URL.revokeObjectURL(fileUrl);
-
-            texture.colorSpace = THREE.SRGBColorSpace;
-            texture.minFilter = THREE.LinearMipMapLinearFilter;
-            texture.magFilter = THREE.LinearFilter;
-            texture.needsUpdate = true;
-
-            material.map = texture;
-            material.needsUpdate = true;
-
-            updatePlaneSize(texture);
-
-            const threeJsGpuFormat = getThreeJsFormatString(texture);
-            let finalFormatString = threeJsGpuFormat;
-
-            // Distinguish KTX1 from KTX2 based on parsed info if available,
-            // otherwise fallback to filename (less reliable but okay as a backup)
-            let isKtx2 = false;
-            if (ktxParsedInfo && 'vkFormat' in ktxParsedInfo) {
-              isKtx2 = true;
-            } else if (selectedFile.name.toLowerCase().endsWith('.ktx2')) {
-              isKtx2 = true;
-            }
-
-
-            if (isKtx2) {
-              finalFormatString = `Basis/KTX2 (Original: ${ktxOriginalFormat}, Transcoded to: ${threeJsGpuFormat})`;
-            } else {
-              finalFormatString = `KTX1 (Original: ${ktxOriginalFormat}, Rendered as: ${threeJsGpuFormat})`;
-            }
-
-            onTextureLoaded({
-              width: texture.image.width,
-              height: texture.image.height,
-              format: finalFormatString,
-            });
-
-            if (rendererRef.current && sceneRef.current && cameraRef.current) {
-              rendererRef.current.render(sceneRef.current, cameraRef.current);
-            }
-
-          } catch (err) {
-            URL.revokeObjectURL(fileUrl);
-            console.error('Error loading KTX texture:', err);
-            let errorMessage = 'Unknown error during KTX loading';
-            if (err instanceof Error) {
-              errorMessage = err.message;
-            } else if (typeof err === 'string') {
-              errorMessage = err;
-            }
-            setError(`Error loading KTX: ${errorMessage}`);
-            onTextureLoaded({ width: 0, height: 0, format: 'Error loading' });
-          } finally {
-            setIsLoading(false);
-          }
-        } else {
+          onTextureLoaded({
+            width: texture.image.width,
+            height: texture.image.height,
+            format: finalFormatString,
+          });
+        } catch (err) {
+          URL.revokeObjectURL(fileUrl);
+          console.error('Error loading KTX texture:', err);
+          const errorMessage = err instanceof Error ? err.message : String(err);
+          setError(`Error loading KTX: ${errorMessage}`);
+          onTextureLoaded({ width: 0, height: 0, format: 'Error loading' });
+          updatePlaneScale(); // Clear plane
+          renderScene();
+        } finally {
           setIsLoading(false);
         }
-      };
-      reader.onerror = (e) => {
-        console.error("FileReader error:", e);
-        setError("Failed to read file.");
-        onTextureLoaded({ width: 0, height: 0, format: 'Error reading file' });
+      } else {
         setIsLoading(false);
-      };
-      reader.readAsArrayBuffer(selectedFile);
-    } else if (!selectedFile && meshRef.current) {
-      const material = meshRef.current.material;
-      if (material.map) {
-        material.map.dispose();
-        material.map = null;
-        material.needsUpdate = true;
       }
-      meshRef.current.scale.set(0, 0, 0);
-      if (rendererRef.current && sceneRef.current && cameraRef.current) {
-        rendererRef.current.render(sceneRef.current, cameraRef.current);
-      }
-      onTextureLoaded({ width: 0, height: 0, format: 'No file selected' });
-    }
-  }, [selectedFile, onTextureLoaded, updatePlaneSize]);
+    };
+    reader.onerror = (e) => {
+      console.error("FileReader error:", e);
+      setError("Failed to read file.");
+      onTextureLoaded({ width: 0, height: 0, format: 'Error reading file' });
+      setIsLoading(false);
+      updatePlaneScale(); // Clear plane
+      renderScene();
+    };
+    reader.readAsArrayBuffer(selectedFile);
+  }, [selectedFile, onTextureLoaded, updatePlaneScale, renderScene]);
 
-  if (cameraRef.current && rendererRef.current, sceneRef.current) {
-    const camera = cameraRef.current;
-    const renderer = rendererRef.current;
-    const scene = sceneRef.current;
-
-    if (flipY) {
-      camera.position.z = -1;
-      camera.rotation.order = 'XZY';
-      camera.rotation.z = Math.PI;
-      camera.rotation.y = Math.PI;
-      renderer.render(scene, camera);
-      
-    } else {
-      camera.position.z = 1;
-      camera.rotation.z = 0;
-      camera.rotation.y = 0;
-      renderer.render(scene, camera);
-    }
-  }
 
   return (
     <div ref={mountRef} style={{ width: '100%', height: '100%', position: 'relative', backgroundColor: '#282c34' }}>
+      <ZoomControls onZoomChange={setZoom} currentZoom={zoom} />
       {isLoading && <div className="texture-viewer-message">Loading texture...</div>}
       {error && <div className="texture-viewer-message" style={{ color: 'red' }}>{error}</div>}
       {!selectedFile && !error && !isLoading && <div className="texture-viewer-message">Drop a KTX/KTX2 file here or select from the list.</div>}

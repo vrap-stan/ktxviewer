@@ -27,7 +27,7 @@ const FileSidebar: React.FC<FileSidebarProps> = ({ files, selectedFile, onFileSe
       </button>
       <button onClick={() => {
         setFlipyY(!flipY);
-      }}>Flipy Y : {flipY ? "O" : "X"}</button>
+      }} style={{marginBottom: '10px', width: '100%', padding: '8px', boxSizing: 'border-box'}}>Flip Y: {flipY ? "ON" : "OFF"}</button>
       <h3>KTX Files</h3>
       {files.length === 0 && <p className="no-files-message">Drop KTX files onto the window.</p>}
       <ul>
