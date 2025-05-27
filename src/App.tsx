@@ -12,6 +12,8 @@ function App() {
   const [sidebarVisible, setSidebarVisible] = useState(true);
   const [textureDisplayInfo, setTextureDisplayInfo] = useState<TextureDisplayInfo | null>(null);
   const appRef = useRef<HTMLDivElement>(null);
+  const [flipyY, setFlipyY] = useState(false);
+
 
   const handleDrop = useCallback((event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -72,6 +74,7 @@ function App() {
         <TextureViewer
           selectedFile={selectedFile?.file || null}
           onTextureLoaded={onTextureLoaded}
+          flipY={flipyY}
         />
         {textureDisplayInfo && <InfoOverlay info={textureDisplayInfo} />}
       </div>
@@ -81,6 +84,8 @@ function App() {
         onFileSelect={handleFileSelect}
         visible={sidebarVisible}
         onToggle={handleToggleSidebar}
+        flipY={flipyY}
+        setFlipyY={setFlipyY}
       />
     </div>
   );

@@ -10,6 +10,7 @@ type KTXContainer = KTX2Container;
 interface TextureViewerProps {
   selectedFile: File | null;
   onTextureLoaded: (info: TextureDisplayInfo) => void;
+  flipY?: boolean;
 }
 
 // Helper to get human-readable format string from Three.js texture object
@@ -53,25 +54,25 @@ const getThreeJsFormatString = (texture: THREE.Texture | THREE.CompressedTexture
 
 // Helper to get KTX-specific format info (simplified)
 const getKtxOriginalFormatString = (ktxInfo: KTXContainer | null): string => {
-    if (!ktxInfo) return "N/A (No KTX Info)";
+  if (!ktxInfo) return "N/A (No KTX Info)";
 
-    // KTX1 specific format
-    if ('glInternalFormat' in ktxInfo && ktxInfo.glInternalFormat !== undefined) {
-        // This check ensures ktxInfo is narrowed to KTX1Container if this block is entered
-        // return `KTX1 Internal: 0x${(ktxInfo as KTX1Container).glInternalFormat.toString(16)}`;
-        throw new Error("KTX1 format handling is not implemented in this example.");
-    }
-    // KTX2 specific format
-    if ('vkFormat' in ktxInfo && ktxInfo.vkFormat !== undefined) {
-         // This check ensures ktxInfo is narrowed to KTX2Container
-        return `KTX2 VKFormat: 0x${(ktxInfo as KTX2Container).vkFormat.toString(16)}`;
-    }
-    
-    return "N/A (Format Undefined in KTX Info)";
+  // KTX1 specific format
+  if ('glInternalFormat' in ktxInfo && ktxInfo.glInternalFormat !== undefined) {
+    // This check ensures ktxInfo is narrowed to KTX1Container if this block is entered
+    // return `KTX1 Internal: 0x${(ktxInfo as KTX1Container).glInternalFormat.toString(16)}`;
+    throw new Error("KTX1 format handling is not implemented in this example.");
+  }
+  // KTX2 specific format
+  if ('vkFormat' in ktxInfo && ktxInfo.vkFormat !== undefined) {
+    // This check ensures ktxInfo is narrowed to KTX2Container
+    return `KTX2 VKFormat: 0x${(ktxInfo as KTX2Container).vkFormat.toString(16)}`;
+  }
+
+  return "N/A (Format Undefined in KTX Info)";
 };
 
 
-const TextureViewer: React.FC<TextureViewerProps> = ({ selectedFile, onTextureLoaded }) => {
+const TextureViewer: React.FC<TextureViewerProps> = ({ selectedFile, onTextureLoaded, flipY }) => {
   const mountRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -80,6 +81,7 @@ const TextureViewer: React.FC<TextureViewerProps> = ({ selectedFile, onTextureLo
   const ktx2LoaderRef = useRef<KTX2Loader | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
 
   const updatePlaneSize = useCallback((texture: THREE.Texture | THREE.CompressedTexture | null) => {
     if (!meshRef.current || !cameraRef.current || !texture || !mountRef.current || !texture.image) return;
@@ -106,10 +108,9 @@ const TextureViewer: React.FC<TextureViewerProps> = ({ selectedFile, onTextureLo
     plane.scale.set(planeWidth, planeHeight, 1);
 
     if (rendererRef.current && sceneRef.current && cameraRef.current) {
-        rendererRef.current.render(sceneRef.current, cameraRef.current);
+      rendererRef.current.render(sceneRef.current, cameraRef.current);
     }
   }, []);
-
 
   useEffect(() => {
     const currentMount = mountRef.current;
@@ -135,10 +136,20 @@ const TextureViewer: React.FC<TextureViewerProps> = ({ selectedFile, onTextureLo
       0.1, 10
     );
     camera.position.z = 1;
+
+    // flip y
+    {
+      camera.position.z = -1;
+      camera.rotation.order = 'XZY';
+      camera.rotation.z = Math.PI;
+      camera.rotation.y = Math.PI;
+    }
+
+
     cameraRef.current = camera;
 
     const geometry = new THREE.PlaneGeometry(1, 1);
-    const material = new THREE.MeshBasicMaterial({ transparent: true, color: 0xffffff });
+    const material = new THREE.MeshBasicMaterial({ transparent: true, color: 0xffffff, side: THREE.DoubleSide });
     const mesh = new THREE.Mesh(geometry, material);
     meshRef.current = mesh;
     scene.add(mesh);
@@ -170,14 +181,14 @@ const TextureViewer: React.FC<TextureViewerProps> = ({ selectedFile, onTextureLo
       if (meshRef.current) {
         meshRef.current.geometry.dispose();
         if (meshRef.current.material.map) {
-            meshRef.current.material.map.dispose();
+          meshRef.current.material.map.dispose();
         }
         meshRef.current.material.dispose();
       }
       rendererRef.current?.dispose();
       if (currentMount && rendererRef.current?.domElement) {
         if (currentMount.contains(rendererRef.current.domElement)) {
-            currentMount.removeChild(rendererRef.current.domElement);
+          currentMount.removeChild(rendererRef.current.domElement);
         }
       }
     };
@@ -219,12 +230,11 @@ const TextureViewer: React.FC<TextureViewerProps> = ({ selectedFile, onTextureLo
             texture.colorSpace = THREE.SRGBColorSpace;
             texture.minFilter = THREE.LinearMipMapLinearFilter;
             texture.magFilter = THREE.LinearFilter;
-            texture.flipY = true;
             texture.needsUpdate = true;
 
             material.map = texture;
             material.needsUpdate = true;
-            
+
             updatePlaneSize(texture);
 
             const threeJsGpuFormat = getThreeJsFormatString(texture);
@@ -234,24 +244,24 @@ const TextureViewer: React.FC<TextureViewerProps> = ({ selectedFile, onTextureLo
             // otherwise fallback to filename (less reliable but okay as a backup)
             let isKtx2 = false;
             if (ktxParsedInfo && 'vkFormat' in ktxParsedInfo) {
-                isKtx2 = true;
+              isKtx2 = true;
             } else if (selectedFile.name.toLowerCase().endsWith('.ktx2')) {
-                isKtx2 = true;
+              isKtx2 = true;
             }
 
 
             if (isKtx2) {
-                finalFormatString = `Basis/KTX2 (Original: ${ktxOriginalFormat}, Transcoded to: ${threeJsGpuFormat})`;
+              finalFormatString = `Basis/KTX2 (Original: ${ktxOriginalFormat}, Transcoded to: ${threeJsGpuFormat})`;
             } else {
-                finalFormatString = `KTX1 (Original: ${ktxOriginalFormat}, Rendered as: ${threeJsGpuFormat})`;
+              finalFormatString = `KTX1 (Original: ${ktxOriginalFormat}, Rendered as: ${threeJsGpuFormat})`;
             }
-            
+
             onTextureLoaded({
               width: texture.image.width,
               height: texture.image.height,
               format: finalFormatString,
             });
-            
+
             if (rendererRef.current && sceneRef.current && cameraRef.current) {
               rendererRef.current.render(sceneRef.current, cameraRef.current);
             }
@@ -261,9 +271,9 @@ const TextureViewer: React.FC<TextureViewerProps> = ({ selectedFile, onTextureLo
             console.error('Error loading KTX texture:', err);
             let errorMessage = 'Unknown error during KTX loading';
             if (err instanceof Error) {
-                errorMessage = err.message;
+              errorMessage = err.message;
             } else if (typeof err === 'string') {
-                errorMessage = err;
+              errorMessage = err;
             }
             setError(`Error loading KTX: ${errorMessage}`);
             onTextureLoaded({ width: 0, height: 0, format: 'Error loading' });
@@ -296,6 +306,25 @@ const TextureViewer: React.FC<TextureViewerProps> = ({ selectedFile, onTextureLo
     }
   }, [selectedFile, onTextureLoaded, updatePlaneSize]);
 
+  if (cameraRef.current && rendererRef.current, sceneRef.current) {
+    const camera = cameraRef.current;
+    const renderer = rendererRef.current;
+    const scene = sceneRef.current;
+
+    if (flipY) {
+      camera.position.z = -1;
+      camera.rotation.order = 'XZY';
+      camera.rotation.z = Math.PI;
+      camera.rotation.y = Math.PI;
+      renderer.render(scene, camera);
+      
+    } else {
+      camera.position.z = 1;
+      camera.rotation.z = 0;
+      camera.rotation.y = 0;
+      renderer.render(scene, camera);
+    }
+  }
 
   return (
     <div ref={mountRef} style={{ width: '100%', height: '100%', position: 'relative', backgroundColor: '#282c34' }}>
