@@ -19,7 +19,7 @@ function App() {
     event.preventDefault();
     event.stopPropagation();
     const files = Array.from(event.dataTransfer.files)
-      .filter(file => file.name.toLowerCase().endsWith('.ktx') || file.name.toLowerCase().endsWith('.ktx2'))
+      .filter(file => file.name.toLowerCase().endsWith('.ktx') || file.name.toLowerCase().endsWith('.ktx2') || file.name.toLowerCase().endsWith('.vri'))
       .map(file => ({ file, id: `${file.name}-${file.lastModified}-${file.size}` }));
 
     if (files.length > 0) {
@@ -27,8 +27,8 @@ function App() {
         const newFiles = files.filter(nf => !prevFiles.some(pf => pf.id === nf.id));
         return [...prevFiles, ...newFiles];
       });
-      if (!selectedFile && files.length > 0) {
-        setSelectedFile(files[0]);
+      if (files.length > 0) {
+        setSelectedFile(files[files.length-1]);
       }
     }
   }, [selectedFile]);
